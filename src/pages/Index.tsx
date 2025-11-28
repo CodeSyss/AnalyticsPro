@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Star, TrendingUp, MessageCircle, DollarSign, Filter, ShoppingBag, Award, BarChart3, Shirt, Wind, PartyPopper, Sparkles } from 'lucide-react';
 import { useData, Category, Product } from '@/context/DataContext';
+import { LanguageSelector, Language } from '@/components/LanguageSelector';
 
 // Sistema de idiomas
 const translations = {
@@ -95,8 +96,6 @@ const translations = {
     }
   }
 };
-
-type Language = 'es' | 'en' | 'zh';
 
 // Iconos por categoría
 const categoryIcons = {
@@ -204,38 +203,10 @@ const Index = () => {
 
           <div className="flex items-center gap-4">
             {/* Selector de Idioma */}
-            <div className="flex items-center gap-1 bg-secondary rounded-lg p-1">
-              <button
-                onClick={() => setLanguage('es')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${language === 'es'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                title="Español"
-              >
-                🇪🇸 ES
-              </button>
-              <button
-                onClick={() => setLanguage('en')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${language === 'en'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                title="English"
-              >
-                🇺🇸 US
-              </button>
-              <button
-                onClick={() => setLanguage('zh')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${language === 'zh'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                title="中文"
-              >
-                🇨🇳 CN
-              </button>
-            </div>
+            <LanguageSelector
+              currentLanguage={language}
+              onLanguageChange={setLanguage}
+            />
           </div>
         </div>
       </header>
