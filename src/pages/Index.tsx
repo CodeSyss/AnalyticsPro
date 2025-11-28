@@ -128,6 +128,48 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'editor'>('dashboard');
   const [sortBy, setSortBy] = useState<'sold' | 'reviews' | 'rating' | 'priceAsc' | 'priceDesc'>('sold');
 
+  // Función para transformar datos de Shein al formato interno
+  const transformSheinData = (sheinData: any[]): Product[] => {
+    return sheinData
+      .filter(item => item.id && item.id !== "Free Version is limited to 25 rows, upgrade to see the 95 other rows")
+      .map(item => {
+        // Parsear precio (eliminar $ y convertir a número)
+        const parsePrice = (priceStr: string): number => {
+          if (!priceStr || priceStr === "Not Available") return 0;
+          return parseFloat(priceStr.replace('$', '').replace(',', '')) || 0;
+        };
+
+        // Parsear conteo de comentarios (manejar "1000+", "100+", etc.)
+        const parseCommentCount = (countStr: string): number => {
+          if (!countStr || countStr === "Not Available") return 0;
+          const cleanStr = countStr.replace(/\+/g, '').replace(',', '');
+          return parseInt(cleanStr) || 0;
+        };
+
+        // Parsear rating
+        const parseRating = (ratingStr: string): number => {
+          if (!ratingStr || ratingStr === "Not Available" || ratingStr === "0") return 0;
+          return parseFloat(ratingStr) || 0;
+        };
+
+        // Calcular sold basado en comentarios (estimación)
+        const reviews = parseCommentCount(item["Comment Count"]);
+        const estimatedSold = Math.round(reviews * 5); // Estimación: 5 ventas por review
+
+        return {
+          id: item.id || item["Product Code"] || Math.random().toString(),
+          name: item["Product Name"] || "Sin nombre",
+          price: parsePrice(item["Sale Price"]),
+          original_price: parsePrice(item["Retail Price"]),
+          rating: parseRating(item["Average Rating"]),
+          reviews: reviews,
+          sold: estimatedSold,
+          image: item["Main Image"] || item["Detail Image 1"] || undefined,
+          category: item["Category Name"] || "General"
+        };
+      });
+  };
+
   // Manejar cambio en el textarea
   const handleJsonChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -135,14 +177,54 @@ const Index = () => {
     try {
       const parsed = JSON.parse(value);
       if (Array.isArray(parsed)) {
-        setProducts(parsed);
-        setError(null);
+        // Detectar si es formato Shein y transformar
+        if (parsed.length > 0 && parsed[0]["Product Name"]) {
+          const transformed = transformSheinData(parsed);
+          setProducts(transformed);
+          setError(null);
+        } else {
+          setProducts(parsed);
+          setError(null);
+        }
       } else {
         setError("El JSON debe ser un array de productos []");
       }
     } catch (err) {
       setError("Error de sintaxis en JSON: " + (err as Error).message);
     }
+  };
+
+  // Manejar carga de archivo
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        const parsed = JSON.parse(content);
+        
+        if (Array.isArray(parsed)) {
+          // Detectar y transformar formato Shein
+          if (parsed.length > 0 && parsed[0]["Product Name"]) {
+            const transformed = transformSheinData(parsed);
+            setProducts(transformed);
+            setJsonInput(JSON.stringify(transformed, null, 2));
+            setError(null);
+          } else {
+            setProducts(parsed);
+            setJsonInput(content);
+            setError(null);
+          }
+        } else {
+          setError("El archivo debe contener un array de productos");
+        }
+      } catch (err) {
+        setError("Error al leer el archivo: " + (err as Error).message);
+      }
+    };
+    reader.readAsText(file);
   };
 
   // Lógica de ordenamiento y análisis
@@ -218,13 +300,41 @@ const Index = () => {
         
         {/* Vista Editor de JSON */}
         {activeTab === 'editor' && (
-          <div className="animate-fade-in">
+          <div className="animate-fade-in space-y-4">
+            {/* Sección de carga de archivo */}
+            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-semibold flex items-center gap-2 mb-1">
+                    <Upload size={18} /> Cargar desde archivo
+                  </h3>
+                  <p className="text-xs text-muted-foreground">Sube un archivo JSON con datos de productos de Shein</p>
+                </div>
+              </div>
+              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors bg-secondary/30 hover:bg-secondary/50">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
+                  <p className="mb-1 text-sm font-medium text-foreground">
+                    <span className="text-primary">Click para subir</span> o arrastra el archivo
+                  </p>
+                  <p className="text-xs text-muted-foreground">JSON (MAX. 20MB)</p>
+                </div>
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            {/* Sección de textarea manual */}
             <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
               <div className="p-4 border-b border-border bg-secondary flex justify-between items-center">
                 <h3 className="font-semibold flex items-center gap-2">
-                  <Upload size={18} /> Cargar Datos
+                  Editar JSON manualmente
                 </h3>
-                <span className="text-xs text-muted-foreground">Pega aquí tu JSON de productos</span>
+                <span className="text-xs text-muted-foreground">O pega aquí tu JSON directamente</span>
               </div>
               <div className="relative">
                 <textarea
@@ -232,6 +342,7 @@ const Index = () => {
                   onChange={handleJsonChange}
                   className="w-full h-96 p-4 font-mono text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                   spellCheck="false"
+                  placeholder='Pega tu JSON aquí... Formato aceptado: datos de Shein o formato estándar'
                 />
                 {error && (
                   <div className="absolute bottom-4 left-4 right-4 bg-destructive/10 text-destructive px-4 py-2 rounded-lg text-sm flex items-center gap-2 border border-destructive/20">
@@ -239,6 +350,18 @@ const Index = () => {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Información sobre el formato */}
+            <div className="bg-info/10 border border-info/20 rounded-lg p-4">
+              <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                <AlertCircle size={16} className="text-info" />
+                Formato detectado automáticamente
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                La aplicación detecta y transforma automáticamente el formato de datos de Shein. 
+                Solo sube el archivo o pega el JSON y los datos se convertirán al formato correcto.
+              </p>
             </div>
           </div>
         )}
