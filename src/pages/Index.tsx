@@ -158,15 +158,19 @@ const Index = () => {
 
     switch (sortBy) {
       case 'popularity':
-        return sorted.sort((a, b) => popularityOrder[b.popularity] - popularityOrder[a.popularity]);
+        return sorted.sort((a, b) => {
+          const aVal = popularityOrder[a.popularity] || 0;
+          const bVal = popularityOrder[b.popularity] || 0;
+          return bVal - aVal;
+        });
       case 'reviews':
-        return sorted.sort((a, b) => b.reviews - a.reviews);
+        return sorted.sort((a, b) => (b.reviews || 0) - (a.reviews || 0));
       case 'rating':
-        return sorted.sort((a, b) => b.rating - a.rating);
+        return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
       case 'priceAsc':
-        return sorted.sort((a, b) => a.price - b.price);
+        return sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
       case 'priceDesc':
-        return sorted.sort((a, b) => b.price - a.price);
+        return sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
       default:
         return sorted;
     }
@@ -229,8 +233,8 @@ const Index = () => {
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
                     className={`p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-2 ${selectedCategory === cat
-                        ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                        : 'border-border hover:border-foreground/20 text-muted-foreground hover:text-foreground'
+                      ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                      : 'border-border hover:border-foreground/20 text-muted-foreground hover:text-foreground'
                       }`}
                   >
                     <Icon size={24} />
@@ -250,156 +254,157 @@ const Index = () => {
           </div>
         )}
 
-        {selectedCategory && stats && (
+        {selectedCategory && (
           <div className="space-y-8 animate-fade-in">
+            {products.length > 0 && stats ? (
+              <>
+                {/* Sección de Estadísticas */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <StatCard
+                    title={t.popularity + " " + t.high}
+                    value={stats.highPopularity.toString()}
+                    subtext="Productos de alta demanda"
+                    icon={TrendingUp}
+                    color="bg-fashion-blue"
+                  />
+                  <StatCard
+                    title={t.totalReviews}
+                    value={stats.totalReviews.toLocaleString()}
+                    subtext={t.userInteractions}
+                    icon={MessageCircle}
+                    color="bg-fashion-purple"
+                  />
+                  <StatCard
+                    title={t.avgPrice}
+                    value={`$${stats.avgPrice.toFixed(2)}`}
+                    subtext={t.perUnit}
+                    icon={DollarSign}
+                    color="bg-fashion-green"
+                  />
+                  <StatCard
+                    title={t.topSeller}
+                    value={stats.topProduct?.name.substring(0, 15) + "..."}
+                    subtext={`${t.popularity}: ${t[stats.topProduct?.popularity]}`}
+                    icon={Award}
+                    color="bg-fashion-orange"
+                  />
+                </div>
 
-            {/* Sección de Estadísticas */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <StatCard
-                title={t.popularity + " " + t.high}
-                value={stats.highPopularity.toString()}
-                subtext="Productos de alta demanda"
-                icon={TrendingUp}
-                color="bg-fashion-blue"
-              />
-              <StatCard
-                title={t.totalReviews}
-                value={stats.totalReviews.toLocaleString()}
-                subtext={t.userInteractions}
-                icon={MessageCircle}
-                color="bg-fashion-purple"
-              />
-              <StatCard
-                title={t.avgPrice}
-                value={`$${stats.avgPrice.toFixed(2)}`}
-                subtext={t.perUnit}
-                icon={DollarSign}
-                color="bg-fashion-green"
-              />
-              <StatCard
-                title={t.topSeller}
-                value={stats.topProduct?.name.substring(0, 15) + "..."}
-                subtext={`${t.popularity}: ${t[stats.topProduct?.popularity]}`}
-                icon={Award}
-                color="bg-fashion-orange"
-              />
-            </div>
-
-            {/* Barra de Herramientas / Filtros */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-card p-4 rounded-xl shadow-sm border border-border">
-              <div className="flex items-center gap-2">
-                <Filter size={18} className="text-muted-foreground" />
-                <span className="font-semibold text-foreground">{t.sortBy}</span>
-              </div>
-              <div className="flex gap-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0">
-                <button
-                  onClick={() => setSortBy('popularity')}
-                  className={`px-4 py-2 text-sm rounded-lg whitespace-nowrap transition-all border font-medium ${sortBy === 'popularity'
-                      ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                      : 'bg-card text-muted-foreground border-border hover:border-foreground/20 hover:text-foreground'
-                    }`}
-                >
-                  {t.popularity}
-                </button>
-                <button
-                  onClick={() => setSortBy('reviews')}
-                  className={`px-4 py-2 text-sm rounded-lg whitespace-nowrap transition-all border font-medium ${sortBy === 'reviews'
-                      ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                      : 'bg-card text-muted-foreground border-border hover:border-foreground/20 hover:text-foreground'
-                    }`}
-                >
-                  {t.mostCommented}
-                </button>
-                <button
-                  onClick={() => setSortBy('rating')}
-                  className={`px-4 py-2 text-sm rounded-lg whitespace-nowrap transition-all border font-medium ${sortBy === 'rating'
-                      ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                      : 'bg-card text-muted-foreground border-border hover:border-foreground/20 hover:text-foreground'
-                    }`}
-                >
-                  {t.bestRated}
-                </button>
-                <button
-                  onClick={() => setSortBy('priceAsc')}
-                  className={`px-4 py-2 text-sm rounded-lg whitespace-nowrap transition-all border font-medium ${sortBy === 'priceAsc'
-                      ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                      : 'bg-card text-muted-foreground border-border hover:border-foreground/20 hover:text-foreground'
-                    }`}
-                >
-                  {t.priceLowHigh}
-                </button>
-              </div>
-            </div>
-
-            {/* Grilla de Productos */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {sortedProducts.map((product, index) => {
-                const popularityColors = {
-                  high: 'bg-fashion-green text-white',
-                  medium: 'bg-fashion-orange text-white',
-                  low: 'bg-muted text-muted-foreground'
-                };
-
-                return (
-                  <div key={product.id || index} className="group bg-card rounded-xl border border-border overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col">
-                    {/* Imagen y Badges */}
-                    <div className="relative aspect-[3/4] overflow-hidden bg-muted">
-                      <img
-                        src={product.image || "https://placehold.co/400x600?text=No+Image"}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-
-                      {/* Badge de Ranking */}
-                      <div className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-xs font-bold px-2 py-1 rounded backdrop-blur-sm">
-                        #{index + 1}
-                      </div>
-
-                      {/* Badge de Popularidad */}
-                      <div className={`absolute top-2 right-2 ${popularityColors[product.popularity]} text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider backdrop-blur-sm`}>
-                        {t[product.popularity]}
-                      </div>
-                    </div>
-
-                    {/* Contenido */}
-                    <div className="p-4 flex-1 flex flex-col">
-                      <div className="text-xs text-muted-foreground mb-1">{product.category || 'General'}</div>
-                      <h3 className="font-medium text-foreground line-clamp-2 leading-tight mb-2 group-hover:text-accent transition-colors">
-                        {product.name}
-                      </h3>
-
-                      <div className="mt-auto pt-3 border-t border-border">
-                        <div className="flex items-end justify-between mb-2">
-                          <div>
-                            <span className="text-lg font-bold text-foreground">${product.price}</span>
-                            {product.original_price && product.original_price > product.price && (
-                              <span className="ml-2 text-xs text-muted-foreground line-through">${product.original_price}</span>
-                            )}
-                          </div>
-                          <RatingStars rating={product.rating} />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground bg-secondary p-2 rounded-lg">
-                          <div className="flex items-center gap-1">
-                            <TrendingUp size={12} className={sortBy === 'popularity' ? 'text-fashion-blue' : ''} />
-                            <span className={sortBy === 'popularity' ? 'font-bold text-foreground' : ''}>{t[product.popularity]}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <MessageCircle size={12} className={sortBy === 'reviews' ? 'text-fashion-blue' : ''} />
-                            <span className={sortBy === 'reviews' ? 'font-bold text-foreground' : ''}>{product.reviews?.toLocaleString()} {t.reviews}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                {/* Barra de Herramientas / Filtros */}
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-card p-4 rounded-xl shadow-sm border border-border">
+                  <div className="flex items-center gap-2">
+                    <Filter size={18} className="text-muted-foreground" />
+                    <span className="font-semibold text-foreground">{t.sortBy}</span>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="flex gap-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0">
+                    <button
+                      onClick={() => setSortBy('popularity')}
+                      className={`px-4 py-2 text-sm rounded-lg whitespace-nowrap transition-all border font-medium ${sortBy === 'popularity'
+                        ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                        : 'bg-card text-muted-foreground border-border hover:border-foreground/20 hover:text-foreground'
+                        }`}
+                    >
+                      {t.popularity}
+                    </button>
+                    <button
+                      onClick={() => setSortBy('reviews')}
+                      className={`px-4 py-2 text-sm rounded-lg whitespace-nowrap transition-all border font-medium ${sortBy === 'reviews'
+                        ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                        : 'bg-card text-muted-foreground border-border hover:border-foreground/20 hover:text-foreground'
+                        }`}
+                    >
+                      {t.mostCommented}
+                    </button>
+                    <button
+                      onClick={() => setSortBy('rating')}
+                      className={`px-4 py-2 text-sm rounded-lg whitespace-nowrap transition-all border font-medium ${sortBy === 'rating'
+                        ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                        : 'bg-card text-muted-foreground border-border hover:border-foreground/20 hover:text-foreground'
+                        }`}
+                    >
+                      {t.bestRated}
+                    </button>
+                    <button
+                      onClick={() => setSortBy('priceAsc')}
+                      className={`px-4 py-2 text-sm rounded-lg whitespace-nowrap transition-all border font-medium ${sortBy === 'priceAsc'
+                        ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                        : 'bg-card text-muted-foreground border-border hover:border-foreground/20 hover:text-foreground'
+                        }`}
+                    >
+                      {t.priceLowHigh}
+                    </button>
+                  </div>
+                </div>
 
-            {sortedProducts.length === 0 && (
-              <div className="text-center py-20 text-muted-foreground">
-                <ShoppingBag size={48} className="mx-auto mb-4 opacity-20" />
-                <p>{t.noProducts}</p>
+                {/* Grilla de Productos */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {sortedProducts.map((product, index) => {
+                    const popularityColors = {
+                      high: 'bg-fashion-green text-white',
+                      medium: 'bg-fashion-orange text-white',
+                      low: 'bg-muted text-muted-foreground'
+                    };
+
+                    return (
+                      <div key={product.id || index} className="group bg-card rounded-xl border border-border overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col">
+                        {/* Imagen y Badges */}
+                        <div className="relative aspect-[3/4] overflow-hidden bg-muted">
+                          <img
+                            src={product.image || "https://placehold.co/400x600?text=No+Image"}
+                            alt={product.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+
+                          {/* Badge de Ranking */}
+                          <div className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-xs font-bold px-2 py-1 rounded backdrop-blur-sm">
+                            #{index + 1}
+                          </div>
+
+                          {/* Badge de Popularidad */}
+                          <div className={`absolute top-2 right-2 ${popularityColors[product.popularity]} text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider backdrop-blur-sm`}>
+                            {t[product.popularity]}
+                          </div>
+                        </div>
+
+                        {/* Contenido */}
+                        <div className="p-4 flex-1 flex flex-col">
+                          <div className="text-xs text-muted-foreground mb-1">{product.category || 'General'}</div>
+                          <h3 className="font-medium text-foreground line-clamp-2 leading-tight mb-2 group-hover:text-accent transition-colors">
+                            {product.name}
+                          </h3>
+
+                          <div className="mt-auto pt-3 border-t border-border">
+                            <div className="flex items-end justify-between mb-2">
+                              <div>
+                                <span className="text-lg font-bold text-foreground">${product.price}</span>
+                                {product.original_price && product.original_price > product.price && (
+                                  <span className="ml-2 text-xs text-muted-foreground line-through">${product.original_price}</span>
+                                )}
+                              </div>
+                              <RatingStars rating={product.rating} />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground bg-secondary p-2 rounded-lg">
+                              <div className="flex items-center gap-1">
+                                <TrendingUp size={12} className={sortBy === 'popularity' ? 'text-fashion-blue' : ''} />
+                                <span className={sortBy === 'popularity' ? 'font-bold text-foreground' : ''}>{t[product.popularity]}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <MessageCircle size={12} className={sortBy === 'reviews' ? 'text-fashion-blue' : ''} />
+                                <span className={sortBy === 'reviews' ? 'font-bold text-foreground' : ''}>{product.reviews?.toLocaleString()} {t.reviews}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-20 text-muted-foreground animate-fade-in">
+                <Filter size={48} className="mx-auto mb-4 opacity-20" />
+                <p className="text-lg font-medium">{t.selectCategory}</p>
               </div>
             )}
           </div>

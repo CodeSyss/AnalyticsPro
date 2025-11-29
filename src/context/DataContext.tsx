@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from "sonner";
+import { db } from '@/lib/firebase';
+import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 // Tipos
 export type Product = {
@@ -32,7 +34,7 @@ const DEFAULT_DATA_BY_CATEGORY: Record<string, Product[]> = {
     vacation: []
 };
 
-// Función para calcular popularidad (movida aquí para reutilizar si es necesario)
+// Función para calcular popularidad
 const calculatePopularity = (rating: number, reviews: number): 'high' | 'medium' | 'low' => {
     const ratingScore = (rating / 5) * 40;
     const reviewScore = Math.min((reviews / 1000) * 60, 60);
@@ -44,33 +46,62 @@ const calculatePopularity = (rating: number, reviews: number): 'high' | 'medium'
 };
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
-    // Inicializar estado desde localStorage si existe
-    const [productsByCategory, setProductsByCategory] = useState<Record<string, Product[]>>(() => {
-        try {
-            const savedData = localStorage.getItem('shein_insights_data');
-            return savedData ? JSON.parse(savedData) : DEFAULT_DATA_BY_CATEGORY;
-        } catch (error) {
-            console.error("Error loading data from localStorage:", error);
-            return DEFAULT_DATA_BY_CATEGORY;
-        }
-    });
+    const [productsByCategory, setProductsByCategory] = useState<Record<string, Product[]>>(DEFAULT_DATA_BY_CATEGORY);
 
-    // Guardar en localStorage cada vez que cambie
+    // Escuchar cambios en tiempo real desde Firestore
     useEffect(() => {
-        try {
-            localStorage.setItem('shein_insights_data', JSON.stringify(productsByCategory));
-        } catch (error) {
-            console.error("Error saving data to localStorage:", error);
-            toast.error("Error al guardar los datos localmente");
-        }
-    }, [productsByCategory]);
+        console.log('🔵 Iniciando listeners de Firestore...');
+        const categories = ['knitwear', 'topsBlouses', 'dresses', 'vacation'];
+        const unsubscribers: (() => void)[] = [];
 
-    const updateCategoryData = (category: string, data: Product[]) => {
-        setProductsByCategory(prev => ({
-            ...prev,
-            [category]: data
-        }));
-        toast.success(`Datos actualizados para la categoría: ${category}`);
+        categories.forEach(category => {
+            const docRef = doc(db, 'categories', category);
+
+            const unsubscribe = onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    console.log(`📥 Datos recibidos de Firestore para ${category}:`, data.products?.length || 0, 'productos');
+                    setProductsByCategory(prev => ({
+                        ...prev,
+                        [category]: data.products || []
+                    }));
+                } else {
+                    console.log(`⚠️ Documento ${category} no existe en Firestore`);
+                }
+            }, (error) => {
+                console.error(`❌ Error listening to ${category}:`, error);
+            });
+
+            unsubscribers.push(unsubscribe);
+        });
+
+        // Cleanup: desuscribirse cuando el componente se desmonte
+        return () => {
+            unsubscribers.forEach(unsub => unsub());
+        };
+    }, []);
+
+    const updateCategoryData = async (category: string, data: Product[]) => {
+        try {
+            console.log('🔵 Guardando en Firestore:', category, 'productos:', data.length);
+
+            // Guardar en Firestore
+            const docRef = doc(db, 'categories', category);
+            await setDoc(docRef, { products: data });
+
+            console.log('✅ Guardado exitoso en Firestore');
+
+            // Actualizar estado local inmediatamente (el listener también lo hará)
+            setProductsByCategory(prev => ({
+                ...prev,
+                [category]: data
+            }));
+
+            toast.success(`Datos sincronizados en la nube para: ${category}`);
+        } catch (error) {
+            console.error("❌ Error saving to Firestore:", error);
+            toast.error("Error al guardar en la nube. Intenta de nuevo.");
+        }
     };
 
     const transformSheinData = (sheinData: any[]): Product[] => {
