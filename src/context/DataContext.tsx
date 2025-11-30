@@ -106,34 +106,52 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // Escuchar cambios en tiempo real desde Firestore
     useEffect(() => {
         console.log('🔵 Iniciando listeners de Firestore...');
-        const categories = ['knitwear', 'topsBlouses', 'dresses', 'vacation', 'trendsNow'];
         const unsubscribers: (() => void)[] = [];
 
-        categories.forEach(category => {
-            const docRef = doc(db, 'categories', category);
-
-            const unsubscribe = onSnapshot(docRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    const rawProducts = data.products || [];
-                    // Limpiamos los datos que vienen de la BD por si acaso
-                    const cleanedProducts = cleanProducts(rawProducts);
-
-                    console.log(`📥 Datos recibidos de Firestore para ${category}:`, cleanedProducts.length, 'productos (limpios)');
-
-                    setProductsByCategory(prev => ({
-                        ...prev,
-                        [category]: cleanedProducts
-                    }));
-                } else {
-                    console.log(`⚠️ Documento ${category} no existe en Firestore`);
-                }
-            }, (error) => {
-                console.error(`❌ Error listening to ${category}:`, error);
-            });
-
-            unsubscribers.push(unsubscribe);
+        // Cargar trendsNow primero (prioridad)
+        const trendsNowRef = doc(db, 'categories', 'trendsNow');
+        const trendsNowUnsubscribe = onSnapshot(trendsNowRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const rawProducts = data.products || [];
+                const cleanedProducts = cleanProducts(rawProducts);
+                console.log(`📥 Datos recibidos de Firestore para trendsNow:`, cleanedProducts.length, 'productos (limpios)');
+                setProductsByCategory(prev => ({
+                    ...prev,
+                    trendsNow: cleanedProducts
+                }));
+            } else {
+                console.log(`⚠️ Documento trendsNow no existe en Firestore`);
+            }
+        }, (error) => {
+            console.error(`❌ Error listening to trendsNow:`, error);
         });
+        unsubscribers.push(trendsNowUnsubscribe);
+
+        // Cargar las demás categorías después con un pequeño delay
+        const otherCategories = ['knitwear', 'topsBlouses', 'dresses', 'vacation'];
+        setTimeout(() => {
+            otherCategories.forEach(category => {
+                const docRef = doc(db, 'categories', category);
+                const unsubscribe = onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        const rawProducts = data.products || [];
+                        const cleanedProducts = cleanProducts(rawProducts);
+                        console.log(`📥 Datos recibidos de Firestore para ${category}:`, cleanedProducts.length, 'productos (limpios)');
+                        setProductsByCategory(prev => ({
+                            ...prev,
+                            [category]: cleanedProducts
+                        }));
+                    } else {
+                        console.log(`⚠️ Documento ${category} no existe en Firestore`);
+                    }
+                }, (error) => {
+                    console.error(`❌ Error listening to ${category}:`, error);
+                });
+                unsubscribers.push(unsubscribe);
+            });
+        }, 500); // Delay de 500ms para cargar las otras categorías
 
         // Cleanup: desuscribirse cuando el componente se desmonte
         return () => {

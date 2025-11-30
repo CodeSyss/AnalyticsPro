@@ -22,7 +22,7 @@ const translations = {
     bestRated: "Mejor Calificación",
     priceLowHigh: "Precio: Bajo a Alto",
     reviews: "reviews",
-    noProducts: "No hay productos para mostrar. Carga datos en el panel de administración.",
+    noProducts: "Seleccione una categoría.",
     selectCategory: "Seleccionar Categoría",
     popularity: "Popularidad",
     high: "Alta",
@@ -199,7 +199,7 @@ const Index = () => {
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10 backdrop-blur-sm bg-card/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setSelectedCategory('trendsNow')}>
             <div className="bg-primary text-primary-foreground p-1.5 rounded-md">
               <BarChart3 size={20} />
             </div>
