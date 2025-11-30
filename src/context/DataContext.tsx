@@ -11,8 +11,10 @@ export type Product = {
     original_price?: number;
     rating: number;
     reviews: number;
+    reviewsDisplay: string;
     popularity: 'high' | 'medium' | 'low';
     image?: string | null;
+    images?: string[];
     category?: string;
 };
 
@@ -46,6 +48,22 @@ const calculatePopularity = (rating: number, reviews: number): 'high' | 'medium'
     return 'low';
 };
 
+// Palabras clave para excluir productos que no son ropa
+const EXCLUDED_KEYWORDS = [
+    'pegamento', 'glue',
+    'colchón', 'mattress',
+    'pestañas', 'lash',
+    'figura', 'figure', 'toy',
+    'uñas', 'nail',
+    'adhesivo', 'adhesive',
+    'maquillaje', 'makeup',
+    'funda', 'case', 'cover',
+    'cable', 'charger',
+    'audífonos', 'headphone', 'earphone', 'botas', 'cabello ', 'juego', 'riñonera', 'desinfectante',
+    'calcetines'
+
+];
+
 // Función para limpiar productos (validación y deduplicación)
 const cleanProducts = (products: Product[]): Product[] => {
     const seen = new Set();
@@ -59,7 +77,15 @@ const cleanProducts = (products: Product[]): Product[] => {
 
         if (!isValid) return false;
 
-        // 2. Deduplicación
+        // 2. Filtrado por palabras clave excluidas
+        const lowerName = product.name.toLowerCase();
+        const hasExcludedKeyword = EXCLUDED_KEYWORDS.some(keyword =>
+            lowerName.includes(keyword.toLowerCase())
+        );
+
+        if (hasExcludedKeyword) return false;
+
+        // 3. Deduplicación
         // Usamos el ID si parece real (no generado por Math.random que empieza con 0.)
         // O el nombre como fallback para evitar duplicados visuales
         const uniqueKey = (product.id && !product.id.startsWith('0.'))
@@ -161,6 +187,22 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 const rating = parseRating(item["Average Rating"]);
                 const popularity = calculatePopularity(rating, reviews);
 
+                // Formato de display para reviews (manteniendo el + si existe)
+                const reviewsDisplay = item["Comment Count"] && item["Comment Count"] !== "Not Available"
+                    ? item["Comment Count"]
+                    : "0";
+
+                // Extraer todas las imágenes disponibles
+                const images: string[] = [];
+                if (item["Main Image"]) images.push(item["Main Image"]);
+
+                // Buscar Detail Image X
+                Object.keys(item).forEach(key => {
+                    if (key.startsWith("Detail Image") && item[key]) {
+                        images.push(item[key]);
+                    }
+                });
+
                 return {
                     id: item.id || item["Product Code"] || Math.random().toString(),
                     name: item["Product Name"] || "Sin nombre",
@@ -168,8 +210,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     original_price: parsePrice(item["Retail Price"]),
                     rating: rating,
                     reviews: reviews,
+                    reviewsDisplay: reviewsDisplay,
                     popularity: popularity,
                     image: item["Main Image"] || item["Detail Image 1"] || null,
+                    images: images,
                     category: item["Category Name"] || "General"
                 };
             });
