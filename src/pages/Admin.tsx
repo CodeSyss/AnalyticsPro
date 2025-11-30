@@ -19,7 +19,8 @@ const translations = {
         knitwear: "Prendas Tejidas",
         topsBlouses: "Tops y Blusas",
         dresses: "Vestidos",
-        vacation: "Ropa de Vacaciones"
+        vacation: "Ropa de Vacaciones",
+        trendsNow: "Trends Now"
     }
 };
 

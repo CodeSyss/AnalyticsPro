@@ -18,7 +18,7 @@ export type Product = {
     category?: string;
 };
 
-export type Category = 'knitwear' | 'topsBlouses' | 'dresses' | 'vacation' | null;
+export type Category = 'knitwear' | 'topsBlouses' | 'dresses' | 'vacation' | 'trendsNow' | null;
 
 type DataContextType = {
     productsByCategory: Record<string, Product[]>;
@@ -34,7 +34,8 @@ const DEFAULT_DATA_BY_CATEGORY: Record<string, Product[]> = {
     knitwear: [],
     topsBlouses: [],
     dresses: [],
-    vacation: []
+    vacation: [],
+    trendsNow: [] // Categoría especial para admin
 };
 
 // Función para calcular popularidad
@@ -105,7 +106,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // Escuchar cambios en tiempo real desde Firestore
     useEffect(() => {
         console.log('🔵 Iniciando listeners de Firestore...');
-        const categories = ['knitwear', 'topsBlouses', 'dresses', 'vacation'];
+        const categories = ['knitwear', 'topsBlouses', 'dresses', 'vacation', 'trendsNow'];
         const unsubscribers: (() => void)[] = [];
 
         categories.forEach(category => {

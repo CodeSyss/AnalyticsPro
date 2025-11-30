@@ -28,6 +28,7 @@ const translations = {
     high: "Alta",
     medium: "Media",
     low: "Baja",
+    trendsNow: "Tendencias Ahora",
     categories: {
       knitwear: "Prendas Tejidas",
       topsBlouses: "Tops y Blusas",
@@ -58,6 +59,7 @@ const translations = {
     high: "High",
     medium: "Medium",
     low: "Low",
+    trendsNow: "Trends Now",
     categories: {
       knitwear: "Knitwear",
       topsBlouses: "Tops & Blouses",
@@ -88,6 +90,7 @@ const translations = {
     high: "高",
     medium: "中",
     low: "低",
+    trendsNow: "热门趋势",
     categories: {
       knitwear: "针织服装",
       topsBlouses: "上衣和衬衫",
@@ -145,7 +148,7 @@ const StatCard = ({ title, value, subtext, icon: Icon, color }: {
 const Index = () => {
   const { productsByCategory } = useData();
   const [language, setLanguage] = useState<Language>('es');
-  const [selectedCategory, setSelectedCategory] = useState<Category>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category>('trendsNow'); // Por defecto muestra Trends Now
   const [sortBy, setSortBy] = useState<'popularity' | 'reviews' | 'rating' | 'priceAsc' | 'priceDesc'>('popularity');
 
   const t = translations[language];
@@ -294,7 +297,9 @@ const Index = () => {
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-card p-4 rounded-xl shadow-sm border border-border">
                   <div className="flex items-center gap-2">
                     <Filter size={18} className="text-muted-foreground" />
-                    <span className="font-semibold text-foreground">{t.sortBy}</span>
+                    <span className="font-semibold text-foreground">
+                      {selectedCategory === 'trendsNow' ? t.trendsNow : t.sortBy}
+                    </span>
                   </div>
                   <div className="flex gap-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0">
                     <button
