@@ -61,7 +61,7 @@ const EXCLUDED_KEYWORDS = [
     'funda', 'case', 'cover',
     'cable', 'charger',
     'audífonos', 'headphone', 'earphone', 'botas', 'cabello ', 'juego', 'riñonera', 'desinfectante',
-    'calcetines'
+    'calcetines', 'manta',
 
 ];
 

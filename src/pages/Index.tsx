@@ -29,6 +29,7 @@ const translations = {
     medium: "Media",
     low: "Baja",
     trendsNow: "Tendencias Ahora",
+    trendsDescription: "Descubre los productos más populares y mejor valorados del momento",
     categories: {
       knitwear: "Prendas Tejidas",
       topsBlouses: "Tops y Blusas",
@@ -60,6 +61,7 @@ const translations = {
     medium: "Medium",
     low: "Low",
     trendsNow: "Trends Now",
+    trendsDescription: "Discover the most popular and best-rated products of the moment",
     categories: {
       knitwear: "Knitwear",
       topsBlouses: "Tops & Blouses",
@@ -91,6 +93,7 @@ const translations = {
     medium: "中",
     low: "低",
     trendsNow: "热门趋势",
+    trendsDescription: "发现当下最受欢迎和评分最高的产品",
     categories: {
       knitwear: "针织服装",
       topsBlouses: "上衣和衬衫",
@@ -220,7 +223,7 @@ const Index = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-        {/* Selector de Categoría */}
+        {/* Selector de Categoría - Siempre visible */}
         <div className="mb-6">
           <div className="bg-card rounded-xl shadow-sm border border-border p-4">
             <h3 className="font-semibold mb-3 flex items-center gap-2">
@@ -249,6 +252,21 @@ const Index = () => {
           </div>
         </div>
 
+        {/* Header especial para Tendencias - Debajo de categorías */}
+        {selectedCategory === 'trendsNow' && (
+          <div className="mb-6 bg-gradient-to-r from-fashion-blue to-fashion-purple rounded-xl shadow-lg border border-border/50 p-6 text-white">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
+                <TrendingUp size={28} className="text-white" />
+              </div>
+              <h2 className="text-3xl font-bold">{t.trendsNow}</h2>
+            </div>
+            <p className="text-white/90 text-sm">
+              {t.trendsDescription}
+            </p>
+          </div>
+        )}
+
         {/* Vista Dashboard */}
         {!selectedCategory && (
           <div className="text-center py-20 text-muted-foreground animate-fade-in">
@@ -261,44 +279,47 @@ const Index = () => {
           <div className="space-y-8 animate-fade-in">
             {products.length > 0 && stats ? (
               <>
-                {/* Sección de Estadísticas */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <StatCard
-                    title={t.popularity + " " + t.high}
-                    value={stats.highPopularity.toString()}
-                    subtext="Productos de alta demanda"
-                    icon={TrendingUp}
-                    color="bg-fashion-blue"
-                  />
-                  <StatCard
-                    title={t.totalReviews}
-                    value={stats.totalReviews.toLocaleString()}
-                    subtext={t.userInteractions}
-                    icon={MessageCircle}
-                    color="bg-fashion-purple"
-                  />
-                  <StatCard
-                    title={t.avgPrice}
-                    value={`$${stats.avgPrice.toFixed(2)}`}
-                    subtext={t.perUnit}
-                    icon={DollarSign}
-                    color="bg-fashion-green"
-                  />
-                  <StatCard
-                    title={t.topSeller}
-                    value={stats.topProduct?.name.substring(0, 15) + "..."}
-                    subtext={`${t.popularity}: ${t[stats.topProduct?.popularity]}`}
-                    icon={Award}
-                    color="bg-fashion-orange"
-                  />
-                </div>
+                {/* Sección de Estadísticas - Solo para categorías, NO para trendsNow */}
+                {selectedCategory !== 'trendsNow' && (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <StatCard
+                      title={t.popularity + " " + t.high}
+                      value={stats.highPopularity.toString()}
+                      subtext="Productos de alta demanda"
+                      icon={TrendingUp}
+                      color="bg-fashion-blue"
+                    />
+                    <StatCard
+                      title={t.totalReviews}
+                      value={stats.totalReviews.toLocaleString()}
+                      subtext={t.userInteractions}
+                      icon={MessageCircle}
+                      color="bg-fashion-purple"
+                    />
+                    <StatCard
+                      title={t.avgPrice}
+                      value={`$${stats.avgPrice.toFixed(2)}`}
+                      subtext={t.perUnit}
+                      icon={DollarSign}
+                      color="bg-fashion-green"
+                    />
+                    <StatCard
+                      title={t.topSeller}
+                      value={stats.topProduct?.name.substring(0, 15) + "..."}
+                      subtext={`${t.popularity}: ${t[stats.topProduct?.popularity]}`}
+                      icon={Award}
+                      color="bg-fashion-orange"
+                    />
+                  </div>
+                )}
+
 
                 {/* Barra de Herramientas / Filtros */}
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-card p-4 rounded-xl shadow-sm border border-border">
                   <div className="flex items-center gap-2">
                     <Filter size={18} className="text-muted-foreground" />
                     <span className="font-semibold text-foreground">
-                      {selectedCategory === 'trendsNow' ? t.trendsNow : t.sortBy}
+                      {t.sortBy}
                     </span>
                   </div>
                   <div className="flex gap-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0">
