@@ -24,7 +24,7 @@ const translations = {
 };
 
 const Admin = () => {
-    const { updateCategoryData, transformSheinData } = useData();
+    const { updateCategoryData, transformSheinData, cleanProducts } = useData();
     const [selectedCategory, setSelectedCategory] = useState<Category>(null);
     const [jsonInput, setJsonInput] = useState('[]');
     const [error, setError] = useState<string | null>(null);
@@ -44,7 +44,8 @@ const Admin = () => {
                     updateCategoryData(selectedCategory, transformed);
                     setError(null);
                 } else {
-                    updateCategoryData(selectedCategory, parsed);
+                    const cleaned = cleanProducts(parsed);
+                    updateCategoryData(selectedCategory, cleaned);
                     setError(null);
                 }
             } else {
@@ -78,7 +79,8 @@ const Admin = () => {
                         setJsonInput(JSON.stringify(transformed, null, 2));
                         setError(null);
                     } else {
-                        updateCategoryData(selectedCategory, parsed);
+                        const cleaned = cleanProducts(parsed);
+                        updateCategoryData(selectedCategory, cleaned);
                         setJsonInput(content);
                         setError(null);
                     }
@@ -115,8 +117,8 @@ const Admin = () => {
                                     key={key}
                                     onClick={() => setSelectedCategory(key as Category)}
                                     className={`p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-2 ${selectedCategory === key
-                                            ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                                            : 'border-border hover:border-foreground/20 text-muted-foreground hover:text-foreground'
+                                        ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                                        : 'border-border hover:border-foreground/20 text-muted-foreground hover:text-foreground'
                                         }`}
                                 >
                                     <span className="text-sm font-medium">{label}</span>
@@ -147,8 +149,8 @@ const Admin = () => {
                             </div>
                         </div>
                         <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${selectedCategory
-                                ? 'border-border hover:border-primary/50 bg-secondary/30 hover:bg-secondary/50'
-                                : 'border-border/30 bg-secondary/10 cursor-not-allowed opacity-50'
+                            ? 'border-border hover:border-primary/50 bg-secondary/30 hover:bg-secondary/50'
+                            : 'border-border/30 bg-secondary/10 cursor-not-allowed opacity-50'
                             }`}>
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <Upload className="w-8 h-8 mb-2 text-muted-foreground" />

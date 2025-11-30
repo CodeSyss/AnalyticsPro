@@ -12,7 +12,7 @@ export type Product = {
     rating: number;
     reviews: number;
     popularity: 'high' | 'medium' | 'low';
-    image?: string;
+    image?: string | null;
     category?: string;
 };
 
@@ -22,6 +22,7 @@ type DataContextType = {
     productsByCategory: Record<string, Product[]>;
     updateCategoryData: (category: string, data: Product[]) => void;
     transformSheinData: (sheinData: any[]) => Product[];
+    cleanProducts: (products: Product[]) => Product[];
 };
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -45,6 +46,33 @@ const calculatePopularity = (rating: number, reviews: number): 'high' | 'medium'
     return 'low';
 };
 
+// Función para limpiar productos (validación y deduplicación)
+const cleanProducts = (products: Product[]): Product[] => {
+    const seen = new Set();
+    return products.filter(product => {
+        // 1. Validaciones básicas
+        const isValid =
+            product.name &&
+            product.name !== "Sin nombre" &&
+            product.price > 0 &&
+            product.image;
+
+        if (!isValid) return false;
+
+        // 2. Deduplicación
+        // Usamos el ID si parece real (no generado por Math.random que empieza con 0.)
+        // O el nombre como fallback para evitar duplicados visuales
+        const uniqueKey = (product.id && !product.id.startsWith('0.'))
+            ? product.id
+            : product.name;
+
+        if (seen.has(uniqueKey)) return false;
+        seen.add(uniqueKey);
+
+        return true;
+    });
+};
+
 export const DataProvider = ({ children }: { children: ReactNode }) => {
     const [productsByCategory, setProductsByCategory] = useState<Record<string, Product[]>>(DEFAULT_DATA_BY_CATEGORY);
 
@@ -60,10 +88,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             const unsubscribe = onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    console.log(`📥 Datos recibidos de Firestore para ${category}:`, data.products?.length || 0, 'productos');
+                    const rawProducts = data.products || [];
+                    // Limpiamos los datos que vienen de la BD por si acaso
+                    const cleanedProducts = cleanProducts(rawProducts);
+
+                    console.log(`📥 Datos recibidos de Firestore para ${category}:`, cleanedProducts.length, 'productos (limpios)');
+
                     setProductsByCategory(prev => ({
                         ...prev,
-                        [category]: data.products || []
+                        [category]: cleanedProducts
                     }));
                 } else {
                     console.log(`⚠️ Documento ${category} no existe en Firestore`);
@@ -100,12 +133,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             toast.success(`Datos sincronizados en la nube para: ${category}`);
         } catch (error) {
             console.error("❌ Error saving to Firestore:", error);
-            toast.error("Error al guardar en la nube. Intenta de nuevo.");
+            toast.error(`Error al guardar en la nube: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         }
     };
 
     const transformSheinData = (sheinData: any[]): Product[] => {
-        return sheinData
+        const rawProducts = sheinData
             .filter(item => item.id && item.id !== "Free Version is limited to 25 rows, upgrade to see the 95 other rows")
             .map(item => {
                 const parsePrice = (priceStr: string): number => {
@@ -136,14 +169,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     rating: rating,
                     reviews: reviews,
                     popularity: popularity,
-                    image: item["Main Image"] || item["Detail Image 1"] || undefined,
+                    image: item["Main Image"] || item["Detail Image 1"] || null,
                     category: item["Category Name"] || "General"
                 };
             });
+
+        return cleanProducts(rawProducts);
     };
 
     return (
-        <DataContext.Provider value={{ productsByCategory, updateCategoryData, transformSheinData }}>
+        <DataContext.Provider value={{ productsByCategory, updateCategoryData, transformSheinData, cleanProducts }}>
             {children}
         </DataContext.Provider>
     );
