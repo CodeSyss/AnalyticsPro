@@ -18,7 +18,7 @@ export type Product = {
     category?: string;
 };
 
-export type Category = 'knitwear' | 'topsBlouses' | 'dresses' | 'vacation' | 'trendsNow' | null;
+export type Category = 'knitwear' | 'topsBlouses' | 'dresses' | 'vacation' | 'pants' | 'jumpsuits' | 'tshirts' | 'leggings' | 'trendsNow' | null;
 
 type DataContextType = {
     productsByCategory: Record<string, Product[]>;
@@ -35,6 +35,10 @@ const DEFAULT_DATA_BY_CATEGORY: Record<string, Product[]> = {
     topsBlouses: [],
     dresses: [],
     vacation: [],
+    pants: [],
+    jumpsuits: [],
+    tshirts: [],
+    leggings: [],
     trendsNow: [] // Categoría especial para admin
 };
 
@@ -129,7 +133,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         unsubscribers.push(trendsNowUnsubscribe);
 
         // Cargar las demás categorías después con un pequeño delay
-        const otherCategories = ['knitwear', 'topsBlouses', 'dresses', 'vacation'];
+        const otherCategories = ['knitwear', 'topsBlouses', 'dresses', 'vacation', 'pants', 'jumpsuits', 'tshirts', 'leggings'];
         setTimeout(() => {
             otherCategories.forEach(category => {
                 const docRef = doc(db, 'categories', category);

@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Star, TrendingUp, MessageCircle, DollarSign, Filter, ShoppingBag, Award, BarChart3, Shirt, Wind, PartyPopper, Sparkles } from 'lucide-react';
+import { Star, TrendingUp, MessageCircle, DollarSign, Filter, ShoppingBag, Award, BarChart3, Shirt, Wind, PartyPopper, Sparkles, Footprints, Zap, User, Waves } from 'lucide-react';
 import { useData, Category, Product } from '@/context/DataContext';
 import { LanguageSelector, Language } from '@/components/LanguageSelector';
 
 // Sistema de idiomas
 const translations = {
   es: {
-    title: "Analytics Pro",
+    title: "Analytics",
     dashboard: "Dashboard",
     totalSales: "Ventas Totales Est.",
     unitsSold: "Unidades vendidas (Dataset)",
@@ -21,6 +21,7 @@ const translations = {
     mostCommented: "Más Comentados",
     bestRated: "Mejor Calificación",
     priceLowHigh: "Precio: Bajo a Alto",
+    priceHighLow: "Precio: Alto a Bajo",
     reviews: "reviews",
     noProducts: "Seleccione una categoría.",
     selectCategory: "Seleccionar Categoría",
@@ -34,11 +35,15 @@ const translations = {
       knitwear: "Prendas Tejidas",
       topsBlouses: "Tops y Blusas",
       dresses: "Vestidos",
-      vacation: "Ropa de Vacaciones"
+      vacation: "Ropa de Vacaciones",
+      pants: "Pantalones",
+      jumpsuits: "Monos y Bodys",
+      tshirts: "Camisetas",
+      leggings: "Leggings"
     }
   },
   en: {
-    title: "Analytics Pro",
+    title: "Analytics",
     dashboard: "Dashboard",
     totalSales: "Total Sales Est.",
     unitsSold: "Units sold (Dataset)",
@@ -53,6 +58,7 @@ const translations = {
     mostCommented: "Most Commented",
     bestRated: "Best Rated",
     priceLowHigh: "Price: Low to High",
+    priceHighLow: "Price: High to Low",
     reviews: "reviews",
     noProducts: "No products to show. Upload data in the admin panel.",
     selectCategory: "Select Category",
@@ -66,11 +72,15 @@ const translations = {
       knitwear: "Knitwear",
       topsBlouses: "Tops & Blouses",
       dresses: "Dresses",
-      vacation: "Vacation Wear"
+      vacation: "Vacation Wear",
+      pants: "Pants",
+      jumpsuits: "Jumpsuits & Bodysuits",
+      tshirts: "T-Shirts",
+      leggings: "Leggings"
     }
   },
   zh: {
-    title: "分析专业版",
+    title: "分析",
     dashboard: "仪表板",
     totalSales: "总销售估算",
     unitsSold: "已售单位（数据集）",
@@ -85,6 +95,7 @@ const translations = {
     mostCommented: "评论最多",
     bestRated: "评分最高",
     priceLowHigh: "价格：从低到高",
+    priceHighLow: "价格：从高到低",
     reviews: "评论",
     noProducts: "没有产品显示。请在管理面板上传数据。",
     selectCategory: "选择类别",
@@ -98,17 +109,25 @@ const translations = {
       knitwear: "针织服装",
       topsBlouses: "上衣和衬衫",
       dresses: "连衣裙",
-      vacation: "度假装"
+      vacation: "度假装",
+      pants: "裤子",
+      jumpsuits: "连身衣",
+      tshirts: "T恤",
+      leggings: "紧身裤"
     }
   }
 };
 
 // Iconos por categoría
 const categoryIcons = {
-  knitwear: Shirt,
-  topsBlouses: Wind,
-  dresses: Sparkles,
-  vacation: PartyPopper
+  knitwear: Shirt,           // Prendas Tejidas - Camisa
+  topsBlouses: Wind,         // Tops y Blusas - Viento (ligero)
+  dresses: Sparkles,         // Vestidos - Destellos (elegante)
+  vacation: PartyPopper,     // Ropa de Vacaciones - Fiesta
+  pants: Footprints,         // Pantalones - Huellas (movimiento/piernas)
+  jumpsuits: Zap,            // Monos y Bodys - Rayo (dinámico)
+  tshirts: User,             // Camisetas - Usuario (casual/básico)
+  leggings: Waves            // Leggings - Ondas (flexibilidad/movimiento)
 };
 
 // Componente para mostrar estrellas
@@ -230,7 +249,7 @@ const Index = () => {
               <Filter size={18} className="text-muted-foreground" />
               {t.selectCategory}
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
               {(Object.keys(categoryIcons) as Category[]).map((cat) => {
                 if (!cat) return null;
                 const Icon = categoryIcons[cat];
@@ -358,6 +377,15 @@ const Index = () => {
                         }`}
                     >
                       {t.priceLowHigh}
+                    </button>
+                    <button
+                      onClick={() => setSortBy('priceDesc')}
+                      className={`px-4 py-2 text-sm rounded-lg whitespace-nowrap transition-all border font-medium ${sortBy === 'priceDesc'
+                        ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                        : 'bg-card text-muted-foreground border-border hover:border-foreground/20 hover:text-foreground'
+                        }`}
+                    >
+                      {t.priceHighLow}
                     </button>
                   </div>
                 </div>

@@ -20,6 +20,10 @@ const translations = {
         topsBlouses: "Tops y Blusas",
         dresses: "Vestidos",
         vacation: "Ropa de Vacaciones",
+        pants: "Pantalones",
+        jumpsuits: "Monos y Bodys",
+        tshirts: "Camisetas",
+        leggings: "Leggings",
         trendsNow: "Trends Now"
     }
 };
@@ -112,7 +116,7 @@ const Admin = () => {
                             <Filter size={18} className="text-muted-foreground" />
                             {translations.selectCategory}
                         </h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                             {Object.entries(translations.categories).map(([key, label]) => (
                                 <button
                                     key={key}
