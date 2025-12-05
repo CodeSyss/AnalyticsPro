@@ -50,13 +50,19 @@ const Admin = () => {
                     const transformed = transformSheinData(parsed);
                     // Asignar el bodyType seleccionado a todos los productos
                     const productsWithBodyType = transformed.map(p => ({ ...p, bodyType: selectedBodyType }));
+                    console.log(`✅ Asignando bodyType "${selectedBodyType}" a ${productsWithBodyType.length} productos`);
+                    console.log('Primer producto:', productsWithBodyType[0]);
                     updateCategoryData(selectedCategory, productsWithBodyType);
+                    toast.success(`✅ ${productsWithBodyType.length} productos guardados con contextura: ${selectedBodyType.toUpperCase()}`);
                     setError(null);
                 } else {
                     const cleaned = cleanProducts(parsed);
                     // Asignar el bodyType seleccionado a todos los productos
                     const productsWithBodyType = cleaned.map(p => ({ ...p, bodyType: selectedBodyType }));
+                    console.log(`✅ Asignando bodyType "${selectedBodyType}" a ${productsWithBodyType.length} productos`);
+                    console.log('Primer producto:', productsWithBodyType[0]);
                     updateCategoryData(selectedCategory, productsWithBodyType);
+                    toast.success(`✅ ${productsWithBodyType.length} productos guardados con contextura: ${selectedBodyType.toUpperCase()}`);
                     setError(null);
                 }
             } else {
@@ -88,15 +94,21 @@ const Admin = () => {
                         const transformed = transformSheinData(parsed);
                         // Asignar el bodyType seleccionado a todos los productos
                         const productsWithBodyType = transformed.map(p => ({ ...p, bodyType: selectedBodyType }));
+                        console.log(`✅ Asignando bodyType "${selectedBodyType}" a ${productsWithBodyType.length} productos desde archivo`);
+                        console.log('Primer producto:', productsWithBodyType[0]);
                         updateCategoryData(selectedCategory, productsWithBodyType);
                         setJsonInput(JSON.stringify(productsWithBodyType, null, 2));
+                        toast.success(`✅ ${productsWithBodyType.length} productos cargados con contextura: ${selectedBodyType.toUpperCase()}`);
                         setError(null);
                     } else {
                         const cleaned = cleanProducts(parsed);
                         // Asignar el bodyType seleccionado a todos los productos
                         const productsWithBodyType = cleaned.map(p => ({ ...p, bodyType: selectedBodyType }));
+                        console.log(`✅ Asignando bodyType "${selectedBodyType}" a ${productsWithBodyType.length} productos desde archivo`);
+                        console.log('Primer producto:', productsWithBodyType[0]);
                         updateCategoryData(selectedCategory, productsWithBodyType);
                         setJsonInput(content);
+                        toast.success(`✅ ${productsWithBodyType.length} productos cargados con contextura: ${selectedBodyType.toUpperCase()}`);
                         setError(null);
                     }
                 } else {
@@ -145,30 +157,40 @@ const Admin = () => {
 
                 {/* Selector de Contextura */}
                 <div className="mb-6">
-                    <div className="bg-card rounded-xl shadow-sm border border-border p-4">
-                        <h3 className="font-semibold mb-3 flex items-center gap-2">
-                            <User size={18} className="text-muted-foreground" />
+                    <div className="bg-gradient-to-br from-card to-primary/5 rounded-xl shadow-lg border-2 border-primary/20 p-5">
+                        <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                            <div className="bg-primary/10 p-2 rounded-lg">
+                                <User size={20} className="text-primary" />
+                            </div>
                             Seleccionar Contextura
                         </h3>
+                        <p className="text-xs text-muted-foreground mb-4">⚠️ Selecciona la contextura ANTES de subir el JSON. Todos los productos se marcarán con esta contextura.</p>
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setSelectedBodyType('standard')}
-                                className={`flex-1 p-4 rounded-lg border-2 transition-all ${selectedBodyType === 'standard'
-                                    ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                                    : 'border-border hover:border-foreground/20 text-muted-foreground hover:text-foreground'
+                                className={`flex-1 p-5 rounded-xl border-2 transition-all ${selectedBodyType === 'standard'
+                                    ? 'border-primary bg-gradient-to-br from-primary/20 to-primary/10 text-primary shadow-lg scale-105'
+                                    : 'border-border hover:border-primary/40 text-muted-foreground hover:text-foreground bg-secondary/30'
                                     }`}
                             >
-                                <span className="text-sm font-medium">Standard</span>
+                                <div className="text-2xl mb-1">👗</div>
+                                <span className="text-base font-bold">Standard</span>
+                                {selectedBodyType === 'standard' && <div className="text-xs mt-1 text-primary/80">✓ Seleccionado</div>}
                             </button>
                             <button
                                 onClick={() => setSelectedBodyType('curvy')}
-                                className={`flex-1 p-4 rounded-lg border-2 transition-all ${selectedBodyType === 'curvy'
-                                    ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                                    : 'border-border hover:border-foreground/20 text-muted-foreground hover:text-foreground'
+                                className={`flex-1 p-5 rounded-xl border-2 transition-all ${selectedBodyType === 'curvy'
+                                    ? 'border-primary bg-gradient-to-br from-primary/20 to-primary/10 text-primary shadow-lg scale-105'
+                                    : 'border-border hover:border-primary/40 text-muted-foreground hover:text-foreground bg-secondary/30'
                                     }`}
                             >
-                                <span className="text-sm font-medium">Curvy</span>
+                                <div className="text-2xl mb-1">💃</div>
+                                <span className="text-base font-bold">Curvy</span>
+                                {selectedBodyType === 'curvy' && <div className="text-xs mt-1 text-primary/80">✓ Seleccionado</div>}
                             </button>
+                        </div>
+                        <div className="mt-4 bg-primary/10 border border-primary/30 rounded-lg p-3">
+                            <p className="text-sm font-semibold text-primary">📌 Contextura actual: <span className="uppercase">{selectedBodyType}</span></p>
                         </div>
                     </div>
                 </div>

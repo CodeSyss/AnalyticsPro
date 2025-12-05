@@ -210,11 +210,28 @@ const Index = () => {
 
   // Filtrar por contextura
   const products = useMemo(() => {
+    console.log(`🔍 Filtrando productos - Categoría: ${selectedCategory}, BodyType Filter: ${bodyTypeFilter}`);
+    console.log(`📦 Total productos raw:`, productsRaw.length);
+
+    // Contar cuántos productos tienen bodyType
+    const withBodyType = productsRaw.filter(p => p.bodyType).length;
+    console.log(`✅ Productos con bodyType:`, withBodyType);
+    console.log(`❌ Productos SIN bodyType:`, productsRaw.length - withBodyType);
+
     if (bodyTypeFilter === 'all') {
+      console.log(`📋 Mostrando TODOS los productos:`, productsRaw.length);
       return productsRaw;
     }
-    return productsRaw.filter(p => p.bodyType === bodyTypeFilter);
-  }, [productsRaw, bodyTypeFilter]);
+
+    const filtered = productsRaw.filter(p => p.bodyType === bodyTypeFilter);
+    console.log(`🎯 Productos filtrados por "${bodyTypeFilter}":`, filtered.length);
+
+    if (filtered.length === 0 && productsRaw.length > 0) {
+      console.warn(`⚠️ No hay productos con bodyType="${bodyTypeFilter}". Verifica que los productos se hayan subido con la contextura correcta.`);
+    }
+
+    return filtered;
+  }, [productsRaw, bodyTypeFilter, selectedCategory]);
 
   // Reset displayCount cuando cambia la categoría o el ordenamiento
   useEffect(() => {

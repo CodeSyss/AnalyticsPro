@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from "sonner";
 import { db } from '@/lib/firebase';
-import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, setDoc, getDoc, getDocs, writeBatch, deleteDoc } from 'firebase/firestore';
 
 // Tipos
 export type Product = {
@@ -109,82 +109,165 @@ const cleanProducts = (products: Product[]): Product[] => {
 export const DataProvider = ({ children }: { children: ReactNode }) => {
     const [productsByCategory, setProductsByCategory] = useState<Record<string, Product[]>>(DEFAULT_DATA_BY_CATEGORY);
 
-    // Escuchar cambios en tiempo real desde Firestore
+    // Escuchar cambios en tiempo real desde Firestore (con soporte para CHUNKS)
     useEffect(() => {
-        console.log('🔵 Iniciando listeners de Firestore...');
+        console.log('🔵 Iniciando listeners de Firestore (modo chunks)...');
         const unsubscribers: (() => void)[] = [];
 
-        // Cargar trendsNow primero (prioridad)
-        const trendsNowRef = doc(db, 'categories', 'trendsNow');
-        const trendsNowUnsubscribe = onSnapshot(trendsNowRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                const rawProducts = data.products || [];
-                const cleanedProducts = cleanProducts(rawProducts);
-                console.log(`📥 Datos recibidos de Firestore para trendsNow:`, cleanedProducts.length, 'productos (limpios)');
-                setProductsByCategory(prev => ({
-                    ...prev,
-                    trendsNow: cleanedProducts
-                }));
-            } else {
-                console.log(`⚠️ Documento trendsNow no existe en Firestore`);
-            }
-        }, (error) => {
-            console.error(`❌ Error listening to trendsNow:`, error);
-        });
-        unsubscribers.push(trendsNowUnsubscribe);
+        const categoriesToListen = [
+            'trendsNow', 'knitwear', 'topsBlouses', 'dresses',
+            'vacation', 'pants', 'jumpsuits', 'tshirts', 'leggings', 'futureModels'
+        ];
 
-        // Cargar las demás categorías después con un pequeño delay
-        const otherCategories = ['knitwear', 'topsBlouses', 'dresses', 'vacation', 'pants', 'jumpsuits', 'tshirts', 'leggings', 'futureModels'];
-        setTimeout(() => {
-            otherCategories.forEach(category => {
-                const docRef = doc(db, 'categories', category);
-                const unsubscribe = onSnapshot(docRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        const rawProducts = data.products || [];
-                        const cleanedProducts = cleanProducts(rawProducts);
-                        console.log(`📥 Datos recibidos de Firestore para ${category}:`, cleanedProducts.length, 'productos (limpios)');
+        categoriesToListen.forEach((category, index) => {
+            // Escuchar la subcolección 'chunks' de cada categoría
+            const chunksCollRef = collection(db, 'categories', category, 'chunks');
+
+            // Usamos un delay escalonado para no saturar la red al inicio
+            setTimeout(() => {
+                const unsubscribe = onSnapshot(chunksCollRef, (snapshot) => {
+                    if (!snapshot.empty) {
+                        // Reconstruir los datos desde los chunks
+                        let allProducts: Product[] = [];
+                        // Ordenar por ID del chunk (0, 1, 2...) para mantener orden
+                        const sortedDocs = snapshot.docs.sort((a, b) => {
+                            const idA = parseInt(a.id);
+                            const idB = parseInt(b.id);
+                            return idA - idB;
+                        });
+
+                        sortedDocs.forEach(doc => {
+                            const data = doc.data();
+                            if (data.products && Array.isArray(data.products)) {
+                                allProducts = [...allProducts, ...data.products];
+                            }
+                        });
+
+                        const cleanedProducts = cleanProducts(allProducts);
+                        console.log(`📥 Datos recibidos (CHUNKS) para ${category}:`, cleanedProducts.length, 'productos');
+
                         setProductsByCategory(prev => ({
                             ...prev,
                             [category]: cleanedProducts
                         }));
                     } else {
-                        console.log(`⚠️ Documento ${category} no existe en Firestore`);
+                        // Intentar leer el modo antiguo (documento único) por compatibilidad
+                        // o si no hay chunks aún
+                        const docRef = doc(db, 'categories', category);
+                        getDoc(docRef).then(docSnap => {
+                            if (docSnap.exists()) {
+                                const data = docSnap.data();
+                                const rawProducts = data.products || [];
+                                if (rawProducts.length > 0) {
+                                    console.log(`⚠️ Leyendo formato LEGACY para ${category}:`, rawProducts.length);
+                                    setProductsByCategory(prev => ({
+                                        ...prev,
+                                        [category]: cleanProducts(rawProducts)
+                                    }));
+                                }
+                            }
+                        });
                     }
                 }, (error) => {
-                    console.error(`❌ Error listening to ${category}:`, error);
+                    console.error(`❌ Error listening to chunks for ${category}:`, error);
                 });
                 unsubscribers.push(unsubscribe);
-            });
-        }, 500); // Delay de 500ms para cargar las otras categorías
+            }, index * 100); // 100ms de delay entre cada listener
+        });
 
-        // Cleanup: desuscribirse cuando el componente se desmonte
         return () => {
             unsubscribers.forEach(unsub => unsub());
         };
     }, []);
 
-    const updateCategoryData = async (category: string, data: Product[]) => {
+    const updateCategoryData = async (category: string, newData: Product[]) => {
         try {
-            console.log('🔵 Guardando en Firestore:', category, 'productos:', data.length);
+            console.log('🔵 Iniciando guardado por CHUNKS en:', category, 'nuevos:', newData.length);
 
-            // Guardar en Firestore
-            const docRef = doc(db, 'categories', category);
-            await setDoc(docRef, { products: data });
+            // 1. Obtener TODOS los chunks actuales para reconstruir el estado actual
+            const chunksCollRef = collection(db, 'categories', category, 'chunks');
+            const snapshot = await getDocs(chunksCollRef);
 
-            console.log('✅ Guardado exitoso en Firestore');
+            let currentProducts: Product[] = [];
 
-            // Actualizar estado local inmediatamente (el listener también lo hará)
+            if (!snapshot.empty) {
+                // Reconstruir desde chunks
+                const sortedDocs = snapshot.docs.sort((a, b) => parseInt(a.id) - parseInt(b.id));
+                sortedDocs.forEach(doc => {
+                    const data = doc.data();
+                    if (data.products) currentProducts = [...currentProducts, ...data.products];
+                });
+            } else {
+                // Intentar leer legacy si no hay chunks
+                const legacyDocRef = doc(db, 'categories', category);
+                const legacySnap = await getDoc(legacyDocRef);
+                if (legacySnap.exists()) {
+                    currentProducts = legacySnap.data().products || [];
+                    console.log('⚠️ Leídos datos legacy para migración:', currentProducts.length);
+                }
+            }
+
+            // 2. Lógica de Merge (Igual que antes)
+            const incomingBodyType = newData.length > 0 ? newData[0].bodyType : null;
+            let finalProducts: Product[] = [];
+
+            if (incomingBodyType) {
+                console.log(`🔄 Merge: Actualizando ${incomingBodyType}...`);
+                const productsToKeep = currentProducts.filter(p => p.bodyType !== incomingBodyType);
+                console.log(`📦 Preservando ${productsToKeep.length} productos de otras contexturas`);
+                finalProducts = [...newData, ...productsToKeep];
+            } else {
+                finalProducts = newData;
+            }
+
+            finalProducts = cleanProducts(finalProducts);
+            console.log(`📊 Total final a guardar: ${finalProducts.length} productos`);
+
+            // 3. CHUNKING y Guardado
+            const CHUNK_SIZE = 450; // Menos de 500 para seguridad (evitar límite 1MB)
+            const totalChunks = Math.ceil(finalProducts.length / CHUNK_SIZE);
+            const batch = writeBatch(db);
+
+            console.log(`📦 Dividiendo en ${totalChunks} chunks de ${CHUNK_SIZE} productos...`);
+
+            // Crear/Actualizar chunks
+            for (let i = 0; i < totalChunks; i++) {
+                const chunkData = finalProducts.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+                const chunkRef = doc(db, 'categories', category, 'chunks', i.toString());
+                batch.set(chunkRef, { products: chunkData });
+            }
+
+            // Borrar chunks sobrantes (si antes habían 5 y ahora solo 3, borrar 3 y 4)
+            if (!snapshot.empty) {
+                const existingChunkIds = snapshot.docs.map(d => parseInt(d.id));
+                const maxExistingId = Math.max(...existingChunkIds);
+
+                if (maxExistingId >= totalChunks) {
+                    for (let i = totalChunks; i <= maxExistingId; i++) {
+                        const chunkToDelete = doc(db, 'categories', category, 'chunks', i.toString());
+                        batch.delete(chunkToDelete);
+                        console.log(`🗑️ Eliminando chunk obsoleto: ${i}`);
+                    }
+                }
+            }
+
+            // También borrar el documento LEGACY principal para evitar confusión
+            const legacyDocRef = doc(db, 'categories', category);
+            batch.delete(legacyDocRef);
+
+            await batch.commit();
+
+            console.log('✅ Guardado exitoso por CHUNKS');
+
             setProductsByCategory(prev => ({
                 ...prev,
-                [category]: data
+                [category]: finalProducts
             }));
 
-            toast.success(`Datos sincronizados en la nube para: ${category}`);
+            toast.success(`Datos guardados: ${finalProducts.length} productos en ${totalChunks} paquetes`);
         } catch (error) {
             console.error("❌ Error saving to Firestore:", error);
-            toast.error(`Error al guardar en la nube: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+            toast.error(`Error al guardar: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         }
     };
 
