@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, AlertCircle, Filter, ArrowLeft } from 'lucide-react';
+import { Upload, AlertCircle, Filter, ArrowLeft, User } from 'lucide-react';
 import { useData, Category } from '@/context/DataContext';
 import { Link } from 'react-router-dom';
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ const translations = {
         jumpsuits: "Monos y Bodys",
         tshirts: "Camisetas",
         leggings: "Leggings",
+        futureModels: "Modelos Futuros",
         trendsNow: "Trends Now"
     }
 };
@@ -31,6 +32,7 @@ const translations = {
 const Admin = () => {
     const { updateCategoryData, transformSheinData, cleanProducts } = useData();
     const [selectedCategory, setSelectedCategory] = useState<Category>(null);
+    const [selectedBodyType, setSelectedBodyType] = useState<'standard' | 'curvy'>('standard');
     const [jsonInput, setJsonInput] = useState('[]');
     const [error, setError] = useState<string | null>(null);
 
@@ -46,11 +48,15 @@ const Admin = () => {
             if (Array.isArray(parsed)) {
                 if (parsed.length > 0 && parsed[0]["Product Name"]) {
                     const transformed = transformSheinData(parsed);
-                    updateCategoryData(selectedCategory, transformed);
+                    // Asignar el bodyType seleccionado a todos los productos
+                    const productsWithBodyType = transformed.map(p => ({ ...p, bodyType: selectedBodyType }));
+                    updateCategoryData(selectedCategory, productsWithBodyType);
                     setError(null);
                 } else {
                     const cleaned = cleanProducts(parsed);
-                    updateCategoryData(selectedCategory, cleaned);
+                    // Asignar el bodyType seleccionado a todos los productos
+                    const productsWithBodyType = cleaned.map(p => ({ ...p, bodyType: selectedBodyType }));
+                    updateCategoryData(selectedCategory, productsWithBodyType);
                     setError(null);
                 }
             } else {
@@ -80,12 +86,16 @@ const Admin = () => {
                 if (Array.isArray(parsed)) {
                     if (parsed.length > 0 && parsed[0]["Product Name"]) {
                         const transformed = transformSheinData(parsed);
-                        updateCategoryData(selectedCategory, transformed);
-                        setJsonInput(JSON.stringify(transformed, null, 2));
+                        // Asignar el bodyType seleccionado a todos los productos
+                        const productsWithBodyType = transformed.map(p => ({ ...p, bodyType: selectedBodyType }));
+                        updateCategoryData(selectedCategory, productsWithBodyType);
+                        setJsonInput(JSON.stringify(productsWithBodyType, null, 2));
                         setError(null);
                     } else {
                         const cleaned = cleanProducts(parsed);
-                        updateCategoryData(selectedCategory, cleaned);
+                        // Asignar el bodyType seleccionado a todos los productos
+                        const productsWithBodyType = cleaned.map(p => ({ ...p, bodyType: selectedBodyType }));
+                        updateCategoryData(selectedCategory, productsWithBodyType);
                         setJsonInput(content);
                         setError(null);
                     }
@@ -129,6 +139,36 @@ const Admin = () => {
                                     <span className="text-sm font-medium">{label}</span>
                                 </button>
                             ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Selector de Contextura */}
+                <div className="mb-6">
+                    <div className="bg-card rounded-xl shadow-sm border border-border p-4">
+                        <h3 className="font-semibold mb-3 flex items-center gap-2">
+                            <User size={18} className="text-muted-foreground" />
+                            Seleccionar Contextura
+                        </h3>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setSelectedBodyType('standard')}
+                                className={`flex-1 p-4 rounded-lg border-2 transition-all ${selectedBodyType === 'standard'
+                                    ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                                    : 'border-border hover:border-foreground/20 text-muted-foreground hover:text-foreground'
+                                    }`}
+                            >
+                                <span className="text-sm font-medium">Standard</span>
+                            </button>
+                            <button
+                                onClick={() => setSelectedBodyType('curvy')}
+                                className={`flex-1 p-4 rounded-lg border-2 transition-all ${selectedBodyType === 'curvy'
+                                    ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                                    : 'border-border hover:border-foreground/20 text-muted-foreground hover:text-foreground'
+                                    }`}
+                            >
+                                <span className="text-sm font-medium">Curvy</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -196,6 +236,11 @@ const Admin = () => {
                                     <AlertCircle size={16} /> {error}
                                 </div>
                             )}
+                        </div>
+                        <div className="p-4 bg-secondary/50 border-t border-border">
+                            <p className="text-xs text-muted-foreground">
+                                <strong>Nota:</strong> Selecciona primero la <strong>Contextura</strong> (Standard o Curvy) arriba, luego sube el JSON. Todos los productos se marcarán automáticamente con la contextura seleccionada.
+                            </p>
                         </div>
                     </div>
 

@@ -16,9 +16,10 @@ export type Product = {
     image?: string | null;
     images?: string[];
     category?: string;
+    bodyType?: 'standard' | 'curvy';
 };
 
-export type Category = 'knitwear' | 'topsBlouses' | 'dresses' | 'vacation' | 'pants' | 'jumpsuits' | 'tshirts' | 'leggings' | 'trendsNow' | null;
+export type Category = 'knitwear' | 'topsBlouses' | 'dresses' | 'vacation' | 'pants' | 'jumpsuits' | 'tshirts' | 'leggings' | 'futureModels' | 'trendsNow' | 'favorites' | null;
 
 type DataContextType = {
     productsByCategory: Record<string, Product[]>;
@@ -39,6 +40,7 @@ const DEFAULT_DATA_BY_CATEGORY: Record<string, Product[]> = {
     jumpsuits: [],
     tshirts: [],
     leggings: [],
+    futureModels: [],
     trendsNow: [] // Categoría especial para admin
 };
 
@@ -133,7 +135,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         unsubscribers.push(trendsNowUnsubscribe);
 
         // Cargar las demás categorías después con un pequeño delay
-        const otherCategories = ['knitwear', 'topsBlouses', 'dresses', 'vacation', 'pants', 'jumpsuits', 'tshirts', 'leggings'];
+        const otherCategories = ['knitwear', 'topsBlouses', 'dresses', 'vacation', 'pants', 'jumpsuits', 'tshirts', 'leggings', 'futureModels'];
         setTimeout(() => {
             otherCategories.forEach(category => {
                 const docRef = doc(db, 'categories', category);

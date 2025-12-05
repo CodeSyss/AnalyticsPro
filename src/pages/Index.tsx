@@ -1,7 +1,9 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Star, TrendingUp, MessageCircle, DollarSign, Filter, ShoppingBag, Award, BarChart3, Shirt, Wind, PartyPopper, Sparkles, Footprints, Zap, User, Waves } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { Star, TrendingUp, MessageCircle, DollarSign, Filter, ShoppingBag, Award, BarChart3, Shirt, Wind, PartyPopper, Sparkles, Footprints, Zap, User, Waves, ArrowUp, Star as StarIcon } from 'lucide-react';
 import { useData, Category, Product } from '@/context/DataContext';
+import { useFavorites } from '@/context/FavoritesContext';
 import { LanguageSelector, Language } from '@/components/LanguageSelector';
+import ProductDetailModal from '@/components/ProductDetailModal';
 
 // Sistema de idiomas
 const translations = {
@@ -18,7 +20,7 @@ const translations = {
     sold: "vendidos",
     sortBy: "Ordenar productos por:",
     mostSold: "Más Vendidos",
-    mostCommented: "Más Comentados",
+    mostCommented: "Más Comentados y Vendidos",
     bestRated: "Mejor Calificación",
     priceLowHigh: "Precio: Bajo a Alto",
     priceHighLow: "Precio: Alto a Bajo",
@@ -31,6 +33,10 @@ const translations = {
     low: "Baja",
     trendsNow: "Tendencias Ahora",
     trendsDescription: "Descubre los productos más populares y mejor valorados del momento",
+    bodyType: "Contextura",
+    all: "Todos",
+    standard: "Standard",
+    curvy: "Curvy",
     categories: {
       knitwear: "Prendas Tejidas",
       topsBlouses: "Tops y Blusas",
@@ -39,7 +45,9 @@ const translations = {
       pants: "Pantalones",
       jumpsuits: "Monos y Bodys",
       tshirts: "Camisetas",
-      leggings: "Leggings"
+      leggings: "Leggings",
+      futureModels: "Modelos Futuros",
+      favorites: "Favoritos"
     }
   },
   en: {
@@ -55,7 +63,7 @@ const translations = {
     sold: "sold",
     sortBy: "Sort products by:",
     mostSold: "Best Sellers",
-    mostCommented: "Most Commented",
+    mostCommented: "Most Commented & Sold",
     bestRated: "Best Rated",
     priceLowHigh: "Price: Low to High",
     priceHighLow: "Price: High to Low",
@@ -68,6 +76,10 @@ const translations = {
     low: "Low",
     trendsNow: "Trends Now",
     trendsDescription: "Discover the most popular and best-rated products of the moment",
+    bodyType: "Body Type",
+    all: "All",
+    standard: "Standard",
+    curvy: "Curvy",
     categories: {
       knitwear: "Knitwear",
       topsBlouses: "Tops & Blouses",
@@ -76,7 +88,9 @@ const translations = {
       pants: "Pants",
       jumpsuits: "Jumpsuits & Bodysuits",
       tshirts: "T-Shirts",
-      leggings: "Leggings"
+      leggings: "Leggings",
+      futureModels: "Future Models",
+      favorites: "Favorites"
     }
   },
   zh: {
@@ -92,7 +106,7 @@ const translations = {
     sold: "已售",
     sortBy: "排序产品：",
     mostSold: "最畅销",
-    mostCommented: "评论最多",
+    mostCommented: "评论和销量最多",
     bestRated: "评分最高",
     priceLowHigh: "价格：从低到高",
     priceHighLow: "价格：从高到低",
@@ -105,6 +119,10 @@ const translations = {
     low: "低",
     trendsNow: "热门趋势",
     trendsDescription: "发现当下最受欢迎和评分最高的产品",
+    bodyType: "体型",
+    all: "全部",
+    standard: "标准",
+    curvy: "丰满",
     categories: {
       knitwear: "针织服装",
       topsBlouses: "上衣和衬衫",
@@ -113,7 +131,9 @@ const translations = {
       pants: "裤子",
       jumpsuits: "连身衣",
       tshirts: "T恤",
-      leggings: "紧身裤"
+      leggings: "紧身裤",
+      futureModels: "未来模型",
+      favorites: "收藏夹"
     }
   }
 };
@@ -127,7 +147,9 @@ const categoryIcons = {
   pants: Footprints,         // Pantalones - Huellas (movimiento/piernas)
   jumpsuits: Zap,            // Monos y Bodys - Rayo (dinámico)
   tshirts: User,             // Camisetas - Usuario (casual/básico)
-  leggings: Waves            // Leggings - Ondas (flexibilidad/movimiento)
+  leggings: Waves,           // Leggings - Ondas (flexibilidad/movimiento)
+  futureModels: TrendingUp,  // Modelos Futuros - Tendencia ascendente
+  favorites: StarIcon        // Favoritos - Estrella
 };
 
 // Componente para mostrar estrellas
@@ -169,12 +191,35 @@ const StatCard = ({ title, value, subtext, icon: Icon, color }: {
 
 const Index = () => {
   const { productsByCategory } = useData();
+  const { favorites } = useFavorites();
   const [language, setLanguage] = useState<Language>('es');
   const [selectedCategory, setSelectedCategory] = useState<Category>('trendsNow'); // Por defecto muestra Trends Now
   const [sortBy, setSortBy] = useState<'popularity' | 'reviews' | 'rating' | 'priceAsc' | 'priceDesc'>('popularity');
+  const [displayCount, setDisplayCount] = useState(24); // Mostrar 24 productos inicialmente
+  const [showScrollTop, setShowScrollTop] = useState(false); // Mostrar botón scroll to top
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null); // Producto seleccionado para modal
+  const [isModalOpen, setIsModalOpen] = useState(false); // Estado del modal
+  const [bodyTypeFilter, setBodyTypeFilter] = useState<'all' | 'standard' | 'curvy'>('all'); // Filtro de contextura
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const t = translations[language];
-  const products = selectedCategory ? productsByCategory[selectedCategory] || [] : [];
+  // Si la categoría es 'favorites', usar los favoritos, sino usar productsByCategory
+  const productsRaw = selectedCategory === 'favorites'
+    ? favorites
+    : (selectedCategory ? productsByCategory[selectedCategory] || [] : []);
+
+  // Filtrar por contextura
+  const products = useMemo(() => {
+    if (bodyTypeFilter === 'all') {
+      return productsRaw;
+    }
+    return productsRaw.filter(p => p.bodyType === bodyTypeFilter);
+  }, [productsRaw, bodyTypeFilter]);
+
+  // Reset displayCount cuando cambia la categoría o el ordenamiento
+  useEffect(() => {
+    setDisplayCount(24);
+  }, [selectedCategory, sortBy]);
 
   // Lógica de ordenamiento y análisis
   const sortedProducts = useMemo(() => {
@@ -216,12 +261,80 @@ const Index = () => {
     return { highPopularity, totalReviews, avgPrice, topProduct };
   }, [products]);
 
+  // Productos a mostrar (limitados por displayCount)
+  const displayedProducts = useMemo(() => {
+    return sortedProducts.slice(0, displayCount);
+  }, [sortedProducts, displayCount]);
+
+  // Intersection Observer para infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first.isIntersecting && displayCount < sortedProducts.length) {
+          // Cargar 24 productos más
+          setDisplayCount(prev => Math.min(prev + 24, sortedProducts.length));
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [displayCount, sortedProducts.length]);
+
+  // Detectar scroll para mostrar/ocultar botón "Scroll to Top"
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 300);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Función para volver arriba
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
+  // Funciones para el modal
+  const openProductDetail = (product: Product) => {
+    setSelectedProduct(product);
+    setIsModalOpen(true);
+  };
+
+  const closeProductDetail = () => {
+    setIsModalOpen(false);
+    setTimeout(() => setSelectedProduct(null), 300); // Delay para animación
+  };
+
+  // Función para ir a Trends Now y scroll al top
+  const goToTrendsNow = () => {
+    setSelectedCategory('trendsNow');
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background font-sans text-foreground">
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10 backdrop-blur-sm bg-card/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setSelectedCategory('trendsNow')}>
+          <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={goToTrendsNow}>
             <div className="bg-primary text-primary-foreground p-1.5 rounded-md">
               <BarChart3 size={20} />
             </div>
@@ -231,6 +344,37 @@ const Index = () => {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Selector de Contextura */}
+            <div className="flex items-center gap-2 bg-secondary rounded-lg p-1">
+              <button
+                onClick={() => setBodyTypeFilter('all')}
+                className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${bodyTypeFilter === 'all'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+                  }`}
+              >
+                {t.all}
+              </button>
+              <button
+                onClick={() => setBodyTypeFilter('standard')}
+                className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${bodyTypeFilter === 'standard'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+                  }`}
+              >
+                {t.standard}
+              </button>
+              <button
+                onClick={() => setBodyTypeFilter('curvy')}
+                className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${bodyTypeFilter === 'curvy'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+                  }`}
+              >
+                {t.curvy}
+              </button>
+            </div>
+
             {/* Selector de Idioma */}
             <LanguageSelector
               currentLanguage={language}
@@ -253,17 +397,30 @@ const Index = () => {
               {(Object.keys(categoryIcons) as Category[]).map((cat) => {
                 if (!cat) return null;
                 const Icon = categoryIcons[cat];
+                const isFavorites = cat === 'favorites';
+
                 return (
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-2 ${selectedCategory === cat
-                      ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                      : 'border-border hover:border-foreground/20 text-muted-foreground hover:text-foreground'
+                    className={`p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-2 relative overflow-hidden ${isFavorites
+                      ? selectedCategory === cat
+                        ? 'border-yellow-400 bg-gradient-to-br from-yellow-400/20 via-amber-500/20 to-orange-500/20 text-yellow-500 shadow-lg shadow-yellow-500/30 scale-105'
+                        : 'border-yellow-400/50 bg-gradient-to-br from-yellow-400/10 via-amber-500/10 to-orange-500/10 text-yellow-600 hover:border-yellow-400 hover:shadow-md hover:shadow-yellow-500/20 hover:scale-105'
+                      : selectedCategory === cat
+                        ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                        : 'border-border hover:border-foreground/20 text-muted-foreground hover:text-foreground'
                       }`}
                   >
-                    <Icon size={24} />
-                    <span className="text-sm font-medium">{t.categories[cat]}</span>
+                    {/* Efecto de brillo para favoritos */}
+                    {isFavorites && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full"
+                        style={{ animation: 'shimmer 3s infinite' }} />
+                    )}
+                    <Icon size={24} className={isFavorites ? 'relative z-10' : ''} />
+                    <span className={`text-sm font-medium ${isFavorites ? 'relative z-10 font-bold' : ''}`}>
+                      {t.categories[cat]}
+                    </span>
                   </button>
                 );
               })}
@@ -392,7 +549,7 @@ const Index = () => {
 
                 {/* Grilla de Productos */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {sortedProducts.map((product, index) => {
+                  {displayedProducts.map((product, index) => {
                     const popularityColors = {
                       high: 'bg-fashion-green text-white',
                       medium: 'bg-fashion-orange text-white',
@@ -407,10 +564,30 @@ const Index = () => {
                         t={t}
                         sortBy={sortBy}
                         popularityColors={popularityColors}
+                        onClick={() => openProductDetail(product)}
                       />
                     );
                   })}
                 </div>
+
+                {/* Elemento de referencia para infinite scroll */}
+                {displayCount < sortedProducts.length && (
+                  <div ref={loadMoreRef} className="flex justify-center items-center py-8">
+                    <div className="animate-pulse flex items-center gap-2 text-muted-foreground">
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      <span className="ml-2 text-sm">Cargando más productos...</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Indicador de productos cargados */}
+                {displayCount >= sortedProducts.length && sortedProducts.length > 24 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p className="text-sm">✓ Todos los productos cargados ({sortedProducts.length} productos)</p>
+                  </div>
+                )}
               </>
             ) : (
               <div className="text-center py-20 text-muted-foreground">
@@ -421,26 +598,67 @@ const Index = () => {
           </div>
         )}
       </main>
+
+      {/* Bot\u00f3n flotante "Scroll to Top" */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-8 right-8 z-50 bg-primary text-primary-foreground p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 animate-fade-in group"
+          aria-label="Volver arriba"
+        >
+          <ArrowUp size={24} className="group-hover:animate-bounce" />
+        </button>
+      )}
+
+      {/* Modal de Detalles del Producto */}
+      <ProductDetailModal
+        product={selectedProduct}
+        isOpen={isModalOpen}
+        onClose={closeProductDetail}
+        t={t}
+      />
     </div>
   );
 };
 
 // Componente ProductCard con carrusel de imágenes
-const ProductCard = ({ product, index, t, sortBy, popularityColors }: {
+const ProductCard = ({ product, index, t, sortBy, popularityColors, onClick }: {
   product: Product;
   index: number;
   t: any;
   sortBy: string;
   popularityColors: Record<string, string>;
+  onClick?: () => void;
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isHovering, setIsHovering] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
 
-  const images = product.images && product.images.length > 0
-    ? product.images
-    : product.image
-      ? [product.image]
-      : ["https://placehold.co/400x600?text=No+Image"];
+  // Filtrar imágenes válidas (no vacías, no null, no undefined)
+  const images = useMemo(() => {
+    const validImages: string[] = [];
+
+    // Verificar si hay array de imágenes
+    if (product.images && Array.isArray(product.images)) {
+      product.images.forEach(img => {
+        if (img && typeof img === 'string' && img.trim() !== '') {
+          validImages.push(img);
+        }
+      });
+    }
+
+    // Si no hay imágenes válidas en el array, intentar con la imagen principal
+    if (validImages.length === 0 && product.image && typeof product.image === 'string' && product.image.trim() !== '') {
+      validImages.push(product.image);
+    }
+
+    // Si aún no hay imágenes, usar placeholder
+    if (validImages.length === 0) {
+      validImages.push("https://placehold.co/400x600?text=No+Image");
+    }
+
+    return validImages;
+  }, [product.images, product.image]);
 
   // Auto-rotate images on hover
   useEffect(() => {
@@ -460,8 +678,22 @@ const ProductCard = ({ product, index, t, sortBy, popularityColors }: {
     }
   }, [isHovering]);
 
+  // Función para cambiar imagen al hacer click en los dots
+  const handleDotClick = (index: number) => {
+    setCurrentImageIndex(index);
+  };
+
+  // Función para toggle favorito
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleFavorite(product);
+  };
+
   return (
-    <div className="group bg-card rounded-xl border border-border overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col">
+    <div
+      className="group bg-card rounded-xl border border-border overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col cursor-pointer"
+      onClick={onClick}
+    >
       {/* Imagen y Badges */}
       <div
         className="relative aspect-[3/4] overflow-hidden bg-muted"
@@ -479,21 +711,41 @@ const ProductCard = ({ product, index, t, sortBy, popularityColors }: {
           #{index + 1}
         </div>
 
-        {/* Badge de Popularidad */}
-        <div className={`absolute top-2 right-2 ${popularityColors[product.popularity]} text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider backdrop-blur-sm`}>
+        {/* Botón de Favorito (Estrella) */}
+        <button
+          onClick={handleFavoriteClick}
+          className="absolute top-2 right-2 p-2 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-all duration-200 group/fav z-10"
+          aria-label={isFavorite(product.id) ? "Quitar de favoritos" : "Agregar a favoritos"}
+        >
+          <StarIcon
+            size={18}
+            className={`transition-all duration-200 ${isFavorite(product.id)
+              ? 'fill-yellow-400 text-yellow-400 scale-110'
+              : 'text-white group-hover/fav:text-yellow-400 group-hover/fav:scale-110'
+              }`}
+          />
+        </button>
+
+        {/* Badge de Popularidad - Movido debajo del botón de favorito */}
+        <div className={`absolute top-14 right-2 ${popularityColors[product.popularity]} text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider backdrop-blur-sm`}>
           {t[product.popularity]}
         </div>
 
-        {/* Indicadores de imagen (dots) */}
+        {/* Indicadores de imagen (dots) - Clickeables */}
         {images.length > 1 && (
           <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
             {images.map((_, idx) => (
-              <div
+              <button
                 key={idx}
-                className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentImageIndex
-                  ? 'bg-white w-4'
-                  : 'bg-white/50'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDotClick(idx);
+                }}
+                className={`rounded-full transition-all cursor-pointer hover:bg-white ${idx === currentImageIndex
+                  ? 'bg-white w-4 h-1.5'
+                  : 'bg-white/50 w-1.5 h-1.5 hover:bg-white/75'
                   }`}
+                aria-label={`Ver imagen ${idx + 1}`}
               />
             ))}
           </div>
