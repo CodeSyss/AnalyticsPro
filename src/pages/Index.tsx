@@ -344,8 +344,8 @@ const Index = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Selector de Contextura */}
-            <div className="flex items-center gap-2 bg-secondary rounded-lg p-1">
+            {/* Selector de Contextura - Desktop (botones) */}
+            <div className="hidden md:flex items-center gap-2 bg-secondary rounded-lg p-1">
               <button
                 onClick={() => setBodyTypeFilter('all')}
                 className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${bodyTypeFilter === 'all'
@@ -375,6 +375,24 @@ const Index = () => {
               </button>
             </div>
 
+            {/* Selector de Contextura - Mobile (dropdown) */}
+            <div className="md:hidden relative">
+              <select
+                value={bodyTypeFilter}
+                onChange={(e) => setBodyTypeFilter(e.target.value as 'all' | 'standard' | 'curvy')}
+                className="appearance-none bg-gradient-to-r from-secondary to-secondary/80 text-foreground border-2 border-primary/20 rounded-lg px-4 py-2 pr-8 text-sm font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all cursor-pointer"
+              >
+                <option value="all">{t.all}</option>
+                <option value="standard">{t.standard}</option>
+                <option value="curvy">{t.curvy}</option>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+
             {/* Selector de Idioma */}
             <LanguageSelector
               currentLanguage={language}
@@ -386,9 +404,10 @@ const Index = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-        {/* Selector de Categoría - Siempre visible */}
+        {/* Selector de Categoría */}
         <div className="mb-6">
-          <div className="bg-card rounded-xl shadow-sm border border-border p-4">
+          {/* Desktop - Grid de categorías */}
+          <div className="hidden md:block bg-card rounded-xl shadow-sm border border-border p-4">
             <h3 className="font-semibold mb-3 flex items-center gap-2">
               <Filter size={18} className="text-muted-foreground" />
               {t.selectCategory}
@@ -424,6 +443,39 @@ const Index = () => {
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Mobile - Dropdown de categorías */}
+          <div className="md:hidden bg-gradient-to-br from-card via-card to-secondary/20 rounded-xl shadow-lg border-2 border-primary/10 p-5">
+            <label htmlFor="category-select" className="font-bold text-base mb-3 flex items-center gap-2 text-foreground">
+              <div className="bg-primary/10 p-2 rounded-lg">
+                <Filter size={20} className="text-primary" />
+              </div>
+              {t.selectCategory}
+            </label>
+            <div className="relative">
+              <select
+                id="category-select"
+                value={selectedCategory || ''}
+                onChange={(e) => setSelectedCategory(e.target.value as Category)}
+                className="w-full mt-2 appearance-none bg-gradient-to-r from-background to-secondary/30 text-foreground border-2 border-primary/20 rounded-xl px-5 py-4 pr-12 text-base font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all cursor-pointer hover:shadow-lg"
+              >
+                {(Object.keys(categoryIcons) as Category[]).map((cat) => {
+                  if (!cat) return null;
+                  const emoji = cat === 'favorites' ? '' : cat === 'trendsNow' ? '' : cat === 'dresses' ? '' : cat === 'pants' ? '' : cat === 'tshirts' ? '' : cat === 'knitwear' ? '' : cat === 'topsBlouses' ? '' : cat === 'vacation' ? '' : cat === 'jumpsuits' ? '' : '';
+                  return (
+                    <option key={cat} value={cat}>
+                      {emoji} {t.categories[cat]}
+                    </option>
+                  );
+                })}
+              </select>
+              <div className="absolute right-4 top-1/2 translate-y-[-25%] pointer-events-none">
+                <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
